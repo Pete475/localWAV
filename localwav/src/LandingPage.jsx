@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { applyMastering } from './engine/masteringLogic';
 
 function LandingPage() {
   const [file, setFile] = useState(null);
@@ -12,13 +13,25 @@ function LandingPage() {
     }
   };
 
-  const masterTrack = (style) => {
+  const masterTrack = async (style) => {
+    if (!file) return;
     setStatus('processing');
 
-    setTimeout(() => {
-      setStatus('complete');
-      console.log(`Finished mastering ${file.name} in ${style} style.`);
-    }, 3000);
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const arrayBuffer = await file.arrayBuffer();
+      const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      const masteredBuffer = await applyMastering(decodedBuffer, style);
+
+      setTimeout(() => {
+        setStatus('complete');
+        console.log(`Mastered ${file.name} in ${style} style.`);
+      }, 2000);
+    } catch (error) {
+      console.error('Error mastering audio:', error);
+      setStatus('idle');
+      alert('There was an error processiong your audio file');
+    }
   };
 
   return (
@@ -26,8 +39,8 @@ function LandingPage() {
       <h1>Welcome to localWAV</h1>
       <h3>Your audio mastering solution for proprietary files.</h3>
       <p>
-        Audio stays on your machine. Use our tools to master it remotely. <br></br>No
-        long uploads. No clouds.
+        Audio stays on your machine. Use our tools to master it remotely.{' '}
+        <br></br>No long uploads. No clouds.
       </p>
       {status === 'idle' && (
         <div style={styles.dropZone}>
